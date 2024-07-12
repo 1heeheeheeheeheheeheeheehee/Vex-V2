@@ -27,7 +27,7 @@ local MainFrame = Library:CreateWindow({
 	Name = "Vex V2",
 	Themeable = {
 		Image = "18443461326",
-		Info = "Made by Exunys\nPowered by Pepsi's UI Library",
+		Info = "",
 		Credit = false
 	},
 	Background = "",
