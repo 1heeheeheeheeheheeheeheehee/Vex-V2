@@ -40,14 +40,14 @@ Library.UnloadCallback = function()
 end
 
 local MainFrame = Library:CreateWindow({
-	Name = "AirHub",
+	Name = "Vex V2",
 	Themeable = {
 		Image = "7059346386",
-		Info = "Made by Exunys\nPowered by Pepsi's UI Library",
+		Info = "",
 		Credit = false
 	},
 	Background = "",
-	Theme = [[{"__Designer.Colors.topGradient":"3F0C64","__Designer.Colors.section":"C259FB","__Designer.Colors.hoveredOptionBottom":"4819B4","__Designer.Background.ImageAssetID":"rbxassetid://4427304036","__Designer.Colors.selectedOption":"4E149C","__Designer.Colors.unselectedOption":"482271","__Designer.Files.WorkspaceFile":"AirHub","__Designer.Colors.unhoveredOptionTop":"310269","__Designer.Colors.outerBorder":"391D57","__Designer.Background.ImageColor":"69009C","__Designer.Colors.tabText":"B9B9B9","__Designer.Colors.elementBorder":"160B24","__Designer.Background.ImageTransparency":100,"__Designer.Colors.background":"1E1237","__Designer.Colors.innerBorder":"531E79","__Designer.Colors.bottomGradient":"361A60","__Designer.Colors.sectionBackground":"21002C","__Designer.Colors.hoveredOptionTop":"6B10F9","__Designer.Colors.otherElementText":"7B44A8","__Designer.Colors.main":"AB26FF","__Designer.Colors.elementText":"9F7DB5","__Designer.Colors.unhoveredOptionBottom":"3E0088","__Designer.Background.UseBackgroundImage":false}]]
+	Theme = [[{"Designer.Colors.section":"341240","Designer.Colors.topGradient":"000000","Designer.Settings.ShowHideKey":"Enum.KeyCode.L","Designer.Colors.otherElementText":"341240","Designer.Colors.hoveredOptionBottom":"800000","Designer.Background.ImageAssetID":"","Designer.Colors.unhoveredOptionTop":"800000","Designer.Colors.innerBorder":"341240","Designer.Colors.unselectedOption":"000000","Designer.Background.UseBackgroundImage":true,"Designer.Files.WorkspaceFile":"VisionV2","Designer.Colors.main":"341240","Designer.Colors.outerBorder":"000000","Designer.Background.ImageColor":"000000","Designer.Colors.tabText":"341240","Designer.Colors.elementBorder":"341240","Designer.Colors.sectionBackground":"000000","Designer.Colors.selectedOption":"000000","Designer.Colors.background":"000000","Designer.Colors.bottomGradient":"000000","Designer.Background.ImageTransparency":95,"Designer.Colors.hoveredOptionTop":"333333","Designer.Colors.elementText":"341240","Designer.Colors.unhoveredOptionBottom":"FFFFFF"}]]
 })
 
 --// Tabs
