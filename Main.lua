@@ -1,473 +1,298 @@
--- Script by casanova
+--// Cache
 
--- init
-if not game:IsLoaded() then 
-    game.Loaded:Wait()
-end
+local loadstring, game, getgenv, setclipboard = loadstring, game, getgenv, setclipboard
 
-if not syn or not protectgui then
-    getgenv().protectgui = function() end
-end
+--// Loaded check
 
-local SilentAimSettings = {
-    Enabled = true,
-    
-    ClassName = "Universal Silent Aim",
-    ToggleKey = "Q",
-    
-    TeamCheck = false,
-    VisibleCheck = false, 
-    TargetPart = "HumanoidRootPart",
-    SilentAimMethod = "FindPartOnRay",
-    
-    FOVRadius = 130,
-    FOVVisible = false,
-    ShowSilentAimTarget = false, 
-    
-    MouseHitPrediction = false,
-    MouseHitPredictionAmount = 0.165,
-    HitChance = 100
-}
+if getgenv().Aimbot then return end
 
--- variables
-getgenv().SilentAimSettings = Settings
-local MainFileName = "UniversalSilentAim"
-local SelectedFile, FileToSave = "", ""
+--// Load Aimbot V2 (Raw)
 
-local Camera = workspace.CurrentCamera
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local GuiService = game:GetService("GuiService")
-local UserInputService = game:GetService("UserInputService")
-local HttpService = game:GetService("HttpService")
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Exunys/Aimbot-V2/main/Resources/Scripts/Raw%20Main.lua"))()
 
-local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
+--// Variables
 
-local GetPlayers = Players.GetPlayers
-local WorldToScreen = Camera.WorldToScreenPoint
-local WorldToViewportPoint = Camera.WorldToViewportPoint
-local GetPartsObscuringTarget = Camera.GetPartsObscuringTarget
-local FindFirstChild = game.FindFirstChild
-local RenderStepped = RunService.RenderStepped
-local GuiInset = GuiService.GetGuiInset
-local GetMouseLocation = UserInputService.GetMouseLocation
+local Aimbot = getgenv().Aimbot
+local Settings, FOVSettings, Functions = Aimbot.Settings, Aimbot.FOVSettings, Aimbot.Functions
 
-local resume = coroutine.resume 
-local create = coroutine.create
+local Library = loadstring(game:GetObjects("rbxassetid://7657867786")[1].Source)() -- Pepsi's UI Library
 
-local ValidTargetParts = {"Head", "HumanoidRootPart"}
-local PredictionAmount = 0.165
+local Parts = {"Head", "HumanoidRootPart", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg", "LeftHand", "RightHand", "LeftLowerArm", "RightLowerArm", "LeftUpperArm", "RightUpperArm", "LeftFoot", "LeftLowerLeg", "UpperTorso", "LeftUpperLeg", "RightFoot", "RightLowerLeg", "LowerTorso", "RightUpperLeg"}
 
-local mouse_box = Drawing.new("Square")
-mouse_box.Visible = true 
-mouse_box.ZIndex = 999 
-mouse_box.Color = Color3.fromRGB(54, 57, 241)
-mouse_box.Thickness = 20 
-mouse_box.Size = Vector2.new(20, 20)
-mouse_box.Filled = true 
+--// Frame
 
-local fov_circle = Drawing.new("Circle")
-fov_circle.Thickness = 1
-fov_circle.NumSides = 100
-fov_circle.Radius = 180
-fov_circle.Filled = false
-fov_circle.Visible = false
-fov_circle.ZIndex = 999
-fov_circle.Transparency = 1
-fov_circle.Color = Color3.fromRGB(54, 57, 241)
+Library.UnloadCallback = Functions.Exit
 
-local ExpectedArguments = {
-    FindPartOnRayWithIgnoreList = {
-        ArgCountRequired = 3,
-        Args = {
-            "Instance", "Ray", "table", "boolean", "boolean"
-        }
-    },
-    FindPartOnRayWithWhitelist = {
-        ArgCountRequired = 3,
-        Args = {
-            "Instance", "Ray", "table", "boolean"
-        }
-    },
-    FindPartOnRay = {
-        ArgCountRequired = 2,
-        Args = {
-            "Instance", "Ray", "Instance", "boolean", "boolean"
-        }
-    },
-    Raycast = {
-        ArgCountRequired = 3,
-        Args = {
-            "Instance", "Vector3", "Vector3", "RaycastParams"
-        }
-    }
-}
+local MainFrame = Library:CreateWindow({
+	Name = "Vex V2",
+	Themeable = {
+		Image = "18443461326",
+		Info = "Made by Exunys\nPowered by Pepsi's UI Library",
+		Credit = false
+	},
+	Background = "",
+	Theme = [[{"__Designer.Colors.section":"4B0082","__Designer.Colors.topGradient":"000000","__Designer.Settings.ShowHideKey":"Enum.KeyCode.RightShift","__Designer.Colors.otherElementText":"000000","__Designer.Colors.hoveredOptionBottom":"000000","__Designer.Background.ImageAssetID":"18443461326","__Designer.Colors.unhoveredOptionTop":"4B0082","__Designer.Colors.innerBorder":"000000","__Designer.Colors.unselectedOption":"4B0082","__Designer.Background.UseBackgroundImage":true,"__Designer.Files.WorkspaceFile":"Vex V2","__Designer.Colors.main":"4B0082","__Designer.Colors.outerBorder":"000000","__Designer.Background.ImageColor":"000000","__Designer.Colors.tabText":"4B0082","__Designer.Colors.elementBorder":"000000","__Designer.Colors.sectionBackground":"1A001E","__Designer.Colors.selectedOption":"4B0082","__Designer.Colors.background":"1A001E","__Designer.Colors.bottomGradient":"000000","__Designer.Background.ImageTransparency":95,"__Designer.Colors.hoveredOptionTop":"4B0082","__Designer.Colors.elementText":"000000","__Designer.Colors.unhoveredOptionBottom":"000000"}]]
+})
 
-function CalculateChance(Percentage)
-    -- // Floor the percentage
-    Percentage = math.floor(Percentage)
+--// Tabs
 
-    -- // Get the chance
-    local chance = math.floor(Random.new().NextNumber(Random.new(), 0, 1) * 100) / 100
+local SettingsTab = MainFrame:CreateTab({
+	Name = "Settings"
+})
 
-    -- // Return
-    return chance <= Percentage / 100
-end
+local FOVSettingsTab = MainFrame:CreateTab({
+	Name = "FOV Settings"
+})
 
+local FunctionsTab = MainFrame:CreateTab({
+	Name = "Functions"
+})
 
---[[file handling]] do 
-    if not isfolder(MainFileName) then 
-        makefolder(MainFileName);
-    end
-    
-    if not isfolder(string.format("%s/%s", MainFileName, tostring(game.PlaceId))) then 
-        makefolder(string.format("%s/%s", MainFileName, tostring(game.PlaceId)))
-    end
-end
+--// Settings - Sections
 
-local Files = listfiles(string.format("%s/%s", "UniversalSilentAim", tostring(game.PlaceId)))
+local Values = SettingsTab:CreateSection({
+	Name = "Values"
+})
 
--- functions
-local function GetFiles() -- credits to the linoria lib for this function, listfiles returns the files full path and its annoying
-	local out = {}
-	for i = 1, #Files do
-		local file = Files[i]
-		if file:sub(-4) == '.lua' then
-			-- i hate this but it has to be done ...
+local Checks = SettingsTab:CreateSection({
+	Name = "Checks"
+})
 
-			local pos = file:find('.lua', 1, true)
-			local start = pos
+local ThirdPerson = SettingsTab:CreateSection({
+	Name = "Third Person"
+})
 
-			local char = file:sub(pos, pos)
-			while char ~= '/' and char ~= '\\' and char ~= '' do
-				pos = pos - 1
-				char = file:sub(pos, pos)
-			end
+--// FOV Settings - Sections
 
-			if char == '/' or char == '\\' then
-				table.insert(out, file:sub(pos + 1, start - 1))
-			end
-		end
+local FOV_Values = FOVSettingsTab:CreateSection({
+	Name = "Values"
+})
+
+local FOV_Appearance = FOVSettingsTab:CreateSection({
+	Name = "Appearance"
+})
+
+--// Functions - Sections
+
+local FunctionsSection = FunctionsTab:CreateSection({
+	Name = "Functions"
+})
+
+--// Settings / Values
+
+Values:AddToggle({
+	Name = "Enabled",
+	Value = Settings.Enabled,
+	Callback = function(New, Old)
+		Settings.Enabled = New
 	end
-	
-	return out
-end
+}).Default = Settings.Enabled
 
-local function UpdateFile(FileName)
-    assert(FileName or FileName == "string", "oopsies");
-    writefile(string.format("%s/%s/%s.lua", MainFileName, tostring(game.PlaceId), FileName), HttpService:JSONEncode(SilentAimSettings))
-end
+Values:AddToggle({
+	Name = "Toggle",
+	Value = Settings.Toggle,
+	Callback = function(New, Old)
+		Settings.Toggle = New
+	end
+}).Default = Settings.Toggle
 
-local function LoadFile(FileName)
-    assert(FileName or FileName == "string", "oopsies");
-    
-    local File = string.format("%s/%s/%s.lua", MainFileName, tostring(game.PlaceId), FileName)
-    local ConfigData = HttpService:JSONDecode(readfile(File))
-    for Index, Value in next, ConfigData do
-        SilentAimSettings[Index] = Value
-    end
-end
+Settings.LockPart = Parts[1]; Values:AddDropdown({
+	Name = "Lock Part",
+	Value = Parts[1],
+	Callback = function(New, Old)
+		Settings.LockPart = New
+	end,
+	List = Parts,
+	Nothing = "Head"
+}).Default = Parts[1]
 
-local function getPositionOnScreen(Vector)
-    local Vec3, OnScreen = WorldToScreen(Camera, Vector)
-    return Vector2.new(Vec3.X, Vec3.Y), OnScreen
-end
+Values:AddTextbox({ -- Using a Textbox instead of a Keybind because the UI Library doesn't support Mouse inputs like Left Click / Right Click...
+	Name = "Hotkey",
+	Value = Settings.TriggerKey,
+	Callback = function(New, Old)
+		Settings.TriggerKey = New
+	end
+}).Default = Settings.TriggerKey
 
-local function ValidateArguments(Args, RayMethod)
-    local Matches = 0
-    if #Args < RayMethod.ArgCountRequired then
-        return false
-    end
-    for Pos, Argument in next, Args do
-        if typeof(Argument) == RayMethod.Args[Pos] then
-            Matches = Matches + 1
-        end
-    end
-    return Matches >= RayMethod.ArgCountRequired
-end
+--[[
+Values:AddKeybind({
+	Name = "Hotkey",
+	Value = Settings.TriggerKey,
+	Callback = function(New, Old)
+		Settings.TriggerKey = stringmatch(tostring(New), "Enum%.[UserInputType]*[KeyCode]*%.(.+)")
+	end,
+}).Default = Settings.TriggerKey
+]]
 
-local function getDirection(Origin, Position)
-    return (Position - Origin).Unit * 1000
-end
+Values:AddSlider({
+	Name = "Sensitivity",
+	Value = Settings.Sensitivity,
+	Callback = function(New, Old)
+		Settings.Sensitivity = New
+	end,
+	Min = 0,
+	Max = 1,
+	Decimals = 2
+}).Default = Settings.Sensitivity
 
-local function getMousePosition()
-    return GetMouseLocation(UserInputService)
-end
+--// Settings / Checks
 
-local function IsPlayerVisible(Player)
-    local PlayerCharacter = Player.Character
-    local LocalPlayerCharacter = LocalPlayer.Character
-    
-    if not (PlayerCharacter or LocalPlayerCharacter) then return end 
-    
-    local PlayerRoot = FindFirstChild(PlayerCharacter, Options.TargetPart.Value) or FindFirstChild(PlayerCharacter, "HumanoidRootPart")
-    
-    if not PlayerRoot then return end 
-    
-    local CastPoints, IgnoreList = {PlayerRoot.Position, LocalPlayerCharacter, PlayerCharacter}, {LocalPlayerCharacter, PlayerCharacter}
-    local ObscuringObjects = #GetPartsObscuringTarget(Camera, CastPoints, IgnoreList)
-    
-    return ((ObscuringObjects == 0 and true) or (ObscuringObjects > 0 and false))
-end
+Checks:AddToggle({
+	Name = "Team Check",
+	Value = Settings.TeamCheck,
+	Callback = function(New, Old)
+		Settings.TeamCheck = New
+	end
+}).Default = Settings.TeamCheck
 
-local function getClosestPlayer()
-    if not Options.TargetPart.Value then return end
-    local Closest
-    local DistanceToMouse
-    for _, Player in next, GetPlayers(Players) do
-        if Player == LocalPlayer then continue end
-        if Toggles.TeamCheck.Value and Player.Team == LocalPlayer.Team then continue end
+Checks:AddToggle({
+	Name = "Wall Check",
+	Value = Settings.WallCheck,
+	Callback = function(New, Old)
+		Settings.WallCheck = New
+	end
+}).Default = Settings.WallCheck
 
-        local Character = Player.Character
-        if not Character then continue end
-        
-        if Toggles.VisibleCheck.Value and not IsPlayerVisible(Player) then continue end
+Checks:AddToggle({
+	Name = "Alive Check",
+	Value = Settings.AliveCheck,
+	Callback = function(New, Old)
+		Settings.AliveCheck = New
+	end
+}).Default = Settings.AliveCheck
 
-        local HumanoidRootPart = FindFirstChild(Character, "HumanoidRootPart")
-        local Humanoid = FindFirstChild(Character, "Humanoid")
-        if not HumanoidRootPart or not Humanoid or Humanoid and Humanoid.Health <= 0 then continue end
+--// Settings / ThirdPerson
 
-        local ScreenPosition, OnScreen = getPositionOnScreen(HumanoidRootPart.Position)
-        if not OnScreen then continue end
+ThirdPerson:AddToggle({
+	Name = "Enable Third Person",
+	Value = Settings.ThirdPerson,
+	Callback = function(New, Old)
+		Settings.ThirdPerson = New
+	end
+}).Default = Settings.ThirdPerson
 
-        local Distance = (getMousePosition() - ScreenPosition).Magnitude
-        if Distance <= (DistanceToMouse or Options.Radius.Value or 2000) then
-            Closest = ((Options.TargetPart.Value == "Random" and Character[ValidTargetParts[math.random(1, #ValidTargetParts)]]) or Character[Options.TargetPart.Value])
-            DistanceToMouse = Distance
-        end
-    end
-    return Closest
-end
+ThirdPerson:AddSlider({
+	Name = "Sensitivity",
+	Value = Settings.ThirdPersonSensitivity,
+	Callback = function(New, Old)
+		Settings.ThirdPersonSensitivity = New
+	end,
+	Min = 0.1,
+	Max = 5,
+	Decimals = 1
+}).Default = Settings.ThirdPersonSensitivity
 
--- ui creating & handling
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xaxaxaxaxaxaxaxaxa/Libraries/main/UI's/Linoria/Source.lua"))()
-Library:SetWatermark("github.com/cfreemepq")
+--// FOV Settings / Values
 
-local Window = Library:CreateWindow("Universal casanova")
-local GeneralTab = Window:AddTab("General")
-local MainBOX = GeneralTab:AddLeftTabbox("Main") do
-    local Main = MainBOX:AddTab("Main")
-    
-    Main:AddToggle("aim_Enabled", {Text = "Enabled"}):AddKeyPicker("aim_Enabled_KeyPicker", {Default = "RightAlt", SyncToggleState = true, Mode = "Toggle", Text = "Enabled", NoUI = false});
-    Options.aim_Enabled_KeyPicker:OnClick(function()
-        SilentAimSettings.Enabled = not SilentAimSettings.Enabled
-        
-        Toggles.aim_Enabled.Value = SilentAimSettings.Enabled
-        Toggles.aim_Enabled:SetValue(SilentAimSettings.Enabled)
-        
-        mouse_box.Visible = SilentAimSettings.Enabled
-    end)
-    
-    Main:AddToggle("TeamCheck", {Text = "Team Check", Default = SilentAimSettings.TeamCheck}):OnChanged(function()
-        SilentAimSettings.TeamCheck = Toggles.TeamCheck.Value
-    end)
-    Main:AddToggle("VisibleCheck", {Text = "Visible Check", Default = SilentAimSettings.VisibleCheck}):OnChanged(function()
-        SilentAimSettings.VisibleCheck = Toggles.VisibleCheck.Value
-    end)
-    Main:AddDropdown("TargetPart", {Text = "Target Part", Default = SilentAimSettings.TargetPart, Values = {"Head", "HumanoidRootPart", "Random"}}):OnChanged(function()
-        SilentAimSettings.TargetPart = Options.TargetPart.Value
-    end)
-    Main:AddDropdown("Method", {Text = "Silent Aim Method", Default = SilentAimSettings.SilentAimMethod, Values = {
-        "Raycast","FindPartOnRay",
-        "FindPartOnRayWithWhitelist",
-        "FindPartOnRayWithIgnoreList",
-        "Mouse.Hit/Target"
-    }}):OnChanged(function() 
-        SilentAimSettings.SilentAimMethod = Options.Method.Value 
-    end)
-    Main:AddSlider('HitChance', {
-        Text = 'Hit chance',
-        Default = 100,
-        Min = 0,
-        Max = 100,
-        Rounding = 1,
-    
-        Compact = false,
-    })
-    Options.HitChance:OnChanged(function()
-        SilentAimSettings.HitChance = Options.HitChance.Value
-    end)
-end
+FOV_Values:AddToggle({
+	Name = "Enabled",
+	Value = FOVSettings.Enabled,
+	Callback = function(New, Old)
+		FOVSettings.Enabled = New
+	end
+}).Default = FOVSettings.Enabled
 
-local MiscellaneousBOX = GeneralTab:AddLeftTabbox("Miscellaneous")
-local FieldOfViewBOX = GeneralTab:AddLeftTabbox("Field Of View") do
-    local Main = FieldOfViewBOX:AddTab("Visuals")
-    
-    Main:AddToggle("Visible", {Text = "Show FOV Circle"}):AddColorPicker("Color", {Default = Color3.fromRGB(54, 57, 241)}):OnChanged(function()
-        fov_circle.Visible = Toggles.Visible.Value
-        SilentAimSettings.FOVVisible = Toggles.Visible.Value
-    end)
-    Main:AddSlider("Radius", {Text = "FOV Circle Radius", Min = 0, Max = 360, Default = 130, Rounding = 0}):OnChanged(function()
-        fov_circle.Radius = Options.Radius.Value
-        SilentAimSettings.FOVRadius = Options.Radius.Value
-    end)
-    Main:AddToggle("MousePosition", {Text = "Show Silent Aim Target"}):AddColorPicker("MouseVisualizeColor", {Default = Color3.fromRGB(54, 57, 241)}):OnChanged(function()
-        mouse_box.Visible = Toggles.MousePosition.Value 
-        SilentAimSettings.ShowSilentAimTarget = Toggles.MousePosition.Value 
-    end)
-    local PredictionTab = MiscellaneousBOX:AddTab("Prediction")
-    PredictionTab:AddToggle("Prediction", {Text = "Mouse.Hit/Target Prediction"}):OnChanged(function()
-        SilentAimSettings.MouseHitPrediction = Toggles.Prediction.Value
-    end)
-    PredictionTab:AddSlider("Amount", {Text = "Prediction Amount", Min = 0.165, Max = 1, Default = 0.165, Rounding = 3}):OnChanged(function()
-        PredictionAmount = Options.Amount.Value
-        SilentAimSettings.MouseHitPredictionAmount = Options.Amount.Value
-    end)
-end
+FOV_Values:AddToggle({
+	Name = "Visible",
+	Value = FOVSettings.Visible,
+	Callback = function(New, Old)
+		FOVSettings.Visible = New
+	end
+}).Default = FOVSettings.Visible
 
-local CreateConfigurationBOX = GeneralTab:AddRightTabbox("Create Configuration") do 
-    local Main = CreateConfigurationBOX:AddTab("Create Configuration")
-    
-    Main:AddInput("CreateConfigTextBox", {Default = "", Numeric = false, Finished = false, Text = "Create Configuration to Create", Tooltip = "Creates a configuration file containing settings you can save and load", Placeholder = "File Name here"}):OnChanged(function()
-        if Options.CreateConfigTextBox.Value and string.len(Options.CreateConfigTextBox.Value) ~= "" then 
-            FileToSave = Options.CreateConfigTextBox.Value
-        end
-    end)
-    
-    Main:AddButton("Create Configuration File", function()
-        if FileToSave ~= "" or FileToSave ~= nil then 
-            UpdateFile(FileToSave)
-        end
-    end)
-end
+FOV_Values:AddSlider({
+	Name = "Amount",
+	Value = FOVSettings.Amount,
+	Callback = function(New, Old)
+		FOVSettings.Amount = New
+	end,
+	Min = 10,
+	Max = 300
+}).Default = FOVSettings.Amount
 
-local SaveConfigurationBOX = GeneralTab:AddRightTabbox("Save Configuration") do 
-    local Main = SaveConfigurationBOX:AddTab("Save Configuration")
-    Main:AddDropdown("SaveConfigurationDropdown", {Values = GetFiles(), Text = "Choose Configuration to Save"})
-    Main:AddButton("Save Configuration", function()
-        if Options.SaveConfigurationDropdown.Value then 
-            UpdateFile(Options.SaveConfigurationDropdown.Value)
-        end
-    end)
-end
+--// FOV Settings / Appearance
 
-local LoadConfigurationBOX = GeneralTab:AddRightTabbox("Load Configuration") do 
-    local Main = LoadConfigurationBOX:AddTab("Load Configuration")
-    
-    Main:AddDropdown("LoadConfigurationDropdown", {Values = GetFiles(), Text = "Choose Configuration to Load"})
-    Main:AddButton("Load Configuration", function()
-        if table.find(GetFiles(), Options.LoadConfigurationDropdown.Value) then
-            LoadFile(Options.LoadConfigurationDropdown.Value)
-            
-            Toggles.TeamCheck:SetValue(SilentAimSettings.TeamCheck)
-            Toggles.VisibleCheck:SetValue(SilentAimSettings.VisibleCheck)
-            Options.TargetPart:SetValue(SilentAimSettings.TargetPart)
-            Options.Method:SetValue(SilentAimSettings.SilentAimMethod)
-            Toggles.Visible:SetValue(SilentAimSettings.FOVVisible)
-            Options.Radius:SetValue(SilentAimSettings.FOVRadius)
-            Toggles.MousePosition:SetValue(SilentAimSettings.ShowSilentAimTarget)
-            Toggles.Prediction:SetValue(SilentAimSettings.MouseHitPrediction)
-            Options.Amount:SetValue(SilentAimSettings.MouseHitPredictionAmount)
-            Options.HitChance:SetValue(SilentAimSettings.HitChance)
-        end
-    end)
-end
+FOV_Appearance:AddToggle({
+	Name = "Filled",
+	Value = FOVSettings.Filled,
+	Callback = function(New, Old)
+		FOVSettings.Filled = New
+	end
+}).Default = FOVSettings.Filled
 
-resume(create(function()
-    RenderStepped:Connect(function()
-        if Toggles.MousePosition.Value and Toggles.aim_Enabled.Value then
-            if getClosestPlayer() then 
-                local Root = getClosestPlayer().Parent.PrimaryPart or getClosestPlayer()
-                local RootToViewportPoint, IsOnScreen = WorldToViewportPoint(Camera, Root.Position);
-                -- using PrimaryPart instead because if your Target Part is "Random" it will flicker the square between the Target's Head and HumanoidRootPart (its annoying)
-                
-                mouse_box.Visible = IsOnScreen
-                mouse_box.Position = Vector2.new(RootToViewportPoint.X, RootToViewportPoint.Y)
-            else 
-                mouse_box.Visible = false 
-                mouse_box.Position = Vector2.new()
-            end
-        end
-        
-        if Toggles.Visible.Value then 
-            fov_circle.Visible = Toggles.Visible.Value
-            fov_circle.Color = Options.Color.Value
-            fov_circle.Position = getMousePosition()
-        end
-    end)
-end))
+FOV_Appearance:AddSlider({
+	Name = "Transparency",
+	Value = FOVSettings.Transparency,
+	Callback = function(New, Old)
+		FOVSettings.Transparency = New
+	end,
+	Min = 0,
+	Max = 1,
+	Decimal = 1
+}).Default = FOVSettings.Transparency
 
--- hooks
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(...)
-    local Method = getnamecallmethod()
-    local Arguments = {...}
-    local self = Arguments[1]
-    local chance = CalculateChance(SilentAimSettings.HitChance)
-    if Toggles.aim_Enabled.Value and self == workspace and not checkcaller() and chance == true then
-        if Method == "FindPartOnRayWithIgnoreList" and Options.Method.Value == Method then
-            if ValidateArguments(Arguments, ExpectedArguments.FindPartOnRayWithIgnoreList) then
-                local A_Ray = Arguments[2]
+FOV_Appearance:AddSlider({
+	Name = "Sides",
+	Value = FOVSettings.Sides,
+	Callback = function(New, Old)
+		FOVSettings.Sides = New
+	end,
+	Min = 3,
+	Max = 60
+}).Default = FOVSettings.Sides
 
-                local HitPart = getClosestPlayer()
-                if HitPart then
-                    local Origin = A_Ray.Origin
-                    local Direction = getDirection(Origin, HitPart.Position)
-                    Arguments[2] = Ray.new(Origin, Direction)
+FOV_Appearance:AddSlider({
+	Name = "Thickness",
+	Value = FOVSettings.Thickness,
+	Callback = function(New, Old)
+		FOVSettings.Thickness = New
+	end,
+	Min = 1,
+	Max = 50
+}).Default = FOVSettings.Thickness
 
-                    return oldNamecall(unpack(Arguments))
-                end
-            end
-        elseif Method == "FindPartOnRayWithWhitelist" and Options.Method.Value == Method then
-            if ValidateArguments(Arguments, ExpectedArguments.FindPartOnRayWithWhitelist) then
-                local A_Ray = Arguments[2]
+FOV_Appearance:AddColorpicker({
+	Name = "Color",
+	Value = FOVSettings.Color,
+	Callback = function(New, Old)
+		FOVSettings.Color = New
+	end
+}).Default = FOVSettings.Color
 
-                local HitPart = getClosestPlayer()
-                if HitPart then
-                    local Origin = A_Ray.Origin
-                    local Direction = getDirection(Origin, HitPart.Position)
-                    Arguments[2] = Ray.new(Origin, Direction)
+FOV_Appearance:AddColorpicker({
+	Name = "Locked Color",
+	Value = FOVSettings.LockedColor,
+	Callback = function(New, Old)
+		FOVSettings.LockedColor = New
+	end
+}).Default = FOVSettings.LockedColor
 
-                    return oldNamecall(unpack(Arguments))
-                end
-            end
-        elseif (Method == "FindPartOnRay" or Method == "findPartOnRay") and Options.Method.Value:lower() == Method:lower() then
-            if ValidateArguments(Arguments, ExpectedArguments.FindPartOnRay) then
-                local A_Ray = Arguments[2]
+--// Functions / Functions
 
-                local HitPart = getClosestPlayer()
-                if HitPart then
-                    local Origin = A_Ray.Origin
-                    local Direction = getDirection(Origin, HitPart.Position)
-                    Arguments[2] = Ray.new(Origin, Direction)
+FunctionsSection:AddButton({
+	Name = "Reset Settings",
+	Callback = function()
+		Functions.ResetSettings()
+		Library.ResetAll()
+	end
+})
 
-                    return oldNamecall(unpack(Arguments))
-                end
-            end
-        elseif Method == "Raycast" and Options.Method.Value == Method then
-            if ValidateArguments(Arguments, ExpectedArguments.Raycast) then
-                local A_Origin = Arguments[2]
+FunctionsSection:AddButton({
+	Name = "Restart",
+	Callback = Functions.Restart
+})
 
-                local HitPart = getClosestPlayer()
-                if HitPart then
-                    Arguments[3] = getDirection(A_Origin, HitPart.Position)
+FunctionsSection:AddButton({
+	Name = "Exit",
+	Callback = function()
+		Functions:Exit()
+		Library.Unload()
+	end
+})
 
-                    return oldNamecall(unpack(Arguments))
-                end
-            end
-        end
-    end
-    return oldNamecall(...)
-end))
-
-local oldIndex = nil 
-oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, Index)
-    if self == Mouse and not checkcaller() and Toggles.aim_Enabled.Value and Options.Method.Value == "Mouse.Hit/Target" and getClosestPlayer() then
-        local HitPart = getClosestPlayer()
-         
-        if Index == "Target" or Index == "target" then 
-            return HitPart
-        elseif Index == "Hit" or Index == "hit" then 
-            return ((Toggles.Prediction.Value and (HitPart.CFrame + (HitPart.Velocity * PredictionAmount))) or (not Toggles.Prediction.Value and HitPart.CFrame))
-        elseif Index == "X" or Index == "x" then 
-            return self.X 
-        elseif Index == "Y" or Index == "y" then 
-            return self.Y 
-        elseif Index == "UnitRay" then 
-            return Ray.new(self.Origin, (self.Hit - self.Origin).Unit)
-        end
-    end
-
-    return oldIndex(self, Index)
-end))
+FunctionsSection:AddButton({
+	Name = "Copy Script Page",
+	Callback = function()
+		setclipboard("https://github.com/Exunys/Aimbot-V2")
+	end
+})
