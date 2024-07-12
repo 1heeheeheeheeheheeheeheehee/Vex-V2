@@ -42,7 +42,7 @@ end
 local MainFrame = Library:CreateWindow({
 	Name = "Vex V2",
 	Themeable = {
-		Image = "18443461326",
+		Image = "",
 		Info = "",
 		Credit = false
 	},
