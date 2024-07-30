@@ -1,298 +1,167 @@
---// Cache
+--// Services
 
-local loadstring, game, getgenv, setclipboard = loadstring, game, getgenv, setclipboard
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
---// Loaded check
+--// Shortcuts
 
-if getgenv().Aimbot then return end
-
---// Load Aimbot V2 (Raw)
-
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Exunys/Aimbot-V2/main/Resources/Scripts/Raw%20Main.lua"))()
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
 
 --// Variables
 
-local Aimbot = getgenv().Aimbot
-local Settings, FOVSettings, Functions = Aimbot.Settings, Aimbot.FOVSettings, Aimbot.Functions
+local OldNameCall = nil
 
-local Library = loadstring(game:GetObjects("rbxassetid://7657867786")[1].Source)() -- Pepsi's UI Library
+--// Settings
 
-local Parts = {"Head", "HumanoidRootPart", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg", "LeftHand", "RightHand", "LeftLowerArm", "RightLowerArm", "LeftUpperArm", "RightUpperArm", "LeftFoot", "LeftLowerLeg", "UpperTorso", "LeftUpperLeg", "RightFoot", "RightLowerLeg", "LowerTorso", "RightUpperLeg"}
+getgenv().SilentAimEnabled = true
 
---// Frame
+--// Functions
 
-Library.UnloadCallback = Functions.Exit
+local function GetClosestPlayer()
+	local MaximumDistance = math.huge
+	local Target
 
-local MainFrame = Library:CreateWindow({
-	Name = "Vex V2",
-	Themeable = {
-		Image = "18443461326",
-		Info = "",
-		Credit = false
-	},
-	Background = "",
-	Theme = [[{"__Designer.Colors.section":"4B0082","__Designer.Colors.topGradient":"000000","__Designer.Settings.ShowHideKey":"Enum.KeyCode.RightShift","__Designer.Colors.otherElementText":"000000","__Designer.Colors.hoveredOptionBottom":"000000","__Designer.Background.ImageAssetID":"18443461326","__Designer.Colors.unhoveredOptionTop":"4B0082","__Designer.Colors.innerBorder":"000000","__Designer.Colors.unselectedOption":"4B0082","__Designer.Background.UseBackgroundImage":true,"__Designer.Files.WorkspaceFile":"Vex V2","__Designer.Colors.main":"4B0082","__Designer.Colors.outerBorder":"000000","__Designer.Background.ImageColor":"000000","__Designer.Colors.tabText":"4B0082","__Designer.Colors.elementBorder":"000000","__Designer.Colors.sectionBackground":"1A001E","__Designer.Colors.selectedOption":"4B0082","__Designer.Colors.background":"1A001E","__Designer.Colors.bottomGradient":"000000","__Designer.Background.ImageTransparency":95,"__Designer.Colors.hoveredOptionTop":"4B0082","__Designer.Colors.elementText":"000000","__Designer.Colors.unhoveredOptionBottom":"000000"}]]
-})
+	local Thread = coroutine.wrap(function()
+		wait(20)
+		MaximumDistance = math.huge
+	end)
 
---// Tabs
+	Thread()
 
-local SettingsTab = MainFrame:CreateTab({
-	Name = "Settings"
-})
-
-local FOVSettingsTab = MainFrame:CreateTab({
-	Name = "FOV Settings"
-})
-
-local FunctionsTab = MainFrame:CreateTab({
-	Name = "Functions"
-})
-
---// Settings - Sections
-
-local Values = SettingsTab:CreateSection({
-	Name = "Values"
-})
-
-local Checks = SettingsTab:CreateSection({
-	Name = "Checks"
-})
-
-local ThirdPerson = SettingsTab:CreateSection({
-	Name = "Third Person"
-})
-
---// FOV Settings - Sections
-
-local FOV_Values = FOVSettingsTab:CreateSection({
-	Name = "Values"
-})
-
-local FOV_Appearance = FOVSettingsTab:CreateSection({
-	Name = "Appearance"
-})
-
---// Functions - Sections
-
-local FunctionsSection = FunctionsTab:CreateSection({
-	Name = "Functions"
-})
-
---// Settings / Values
-
-Values:AddToggle({
-	Name = "Enabled",
-	Value = Settings.Enabled,
-	Callback = function(New, Old)
-		Settings.Enabled = New
+	for _, v in next, Players:GetPlayers() do
+		if v.Name ~= LocalPlayer.Name then
+			if v.TeamColor ~= LocalPlayer.TeamColor then
+				if workspace:FindFirstChild(v.Name) ~= nil then
+					if workspace[v.Name]:FindFirstChild("HumanoidRootPart") ~= nil then
+						if workspace[v.Name]:FindFirstChild("Humanoid") ~= nil and workspace[v.Name]:FindFirstChild("Humanoid").Health ~= 0 then
+							local ScreenPoint = Camera:WorldToScreenPoint(workspace[v.Name]:WaitForChild("HumanoidRootPart", math.huge).Position)
+							local VectorDistance = (Vector2.new(UserInputService:GetMouseLocation().X, UserInputService:GetMouseLocation().Y) - Vector2.new(ScreenPoint.X, ScreenPoint.Y)).Magnitude
+							
+							if VectorDistance < MaximumDistance then
+								Target = v
+								MaximumDistance = VectorDistance
+							end
+						end
+					end
+				end
+			end
+		end
 	end
-}).Default = Settings.Enabled
 
-Values:AddToggle({
-	Name = "Toggle",
-	Value = Settings.Toggle,
-	Callback = function(New, Old)
-		Settings.Toggle = New
+	return Target
+end
+
+--// Silent Aim
+
+OldNameCall = hookmetamethod(game, "__namecall", function(Self, ...)
+	local NameCallMethod = getnamecallmethod()
+	local Arguments = {...}
+
+	if not checkcaller() and tostring(Self) == "HitPart" and tostring(NameCallMethod) == "FireServer" then
+		if getgenv().SilentAimEnabled == true then
+			Arguments[1] = GetClosestPlayer().Character.Hitbox
+		end
+
+		return Self.FireServer(Self, unpack(Arguments))
+	elseif not checkcaller() and tostring(Self) == "Trail" and tostring(NameCallMethod) == "FireServer" then
+		if getgenv().SilentAimEnabled == true then
+			if type(Arguments[1][5]) == "string" then
+				Arguments[1][6] = GetClosestPlayer().Character.Hitbox
+				Arguments[1][2] = GetClosestPlayer().Character.Hitbox.Position
+			end
+		end
+
+		return Self.FireServer(Self, unpack(Arguments))
+	elseif not checkcaller() and tostring(Self) == "CreateProjectile" and tostring(NameCallMethod) == "FireServer" then	
+		if getgenv().SilentAimEnabled == true then
+			Arguments[18] = GetClosestPlayer().Character.Hitbox
+			Arguments[19] = GetClosestPlayer().Character.Hitbox.Position
+			Arguments[17] = GetClosestPlayer().Character.Hitbox.Position
+			Arguments[4] = GetClosestPlayer().Character.Hitbox.CFrame
+			Arguments[10] = GetClosestPlayer().Character.Hitbox.Position
+			Arguments[3] = GetClosestPlayer().Character.Hitbox.Position
+		end
+
+		return Self.FireServer(Self, unpack(Arguments))
+	elseif not checkcaller() and tostring(Self) == "Flames" and tostring(NameCallMethod) == "FireServer" then -- DOESNT WORK
+		if getgenv().SilentAimEnabled == true then
+			Arguments[1] = GetClosestPlayer().Character.Hitbox.CFrame
+			Arguments[2] = GetClosestPlayer().Character.Hitbox.Position
+			Arguments[5] = GetClosestPlayer().Character.Hitbox.Position
+		end
+
+		return Self.FireServer(Self, unpack(Arguments))
+	elseif not checkcaller() and tostring(Self) == "Fire" and tostring(NameCallMethod) == "FireServer" then
+		if getgenv().SilentAimEnabled == true then
+			Arguments[1] = GetClosestPlayer().Character.Hitbox.Position
+		end
+
+		return Self.FireServer(Self, unpack(Arguments))
+	elseif not checkcaller() and tostring(Self) == "ReplicateProjectile" and tostring(NameCallMethod) == "FireServer" then
+		if getgenv().SilentAimEnabled == true then
+			Arguments[1][3] = GetClosestPlayer().Character.Hitbox.Position
+			Arguments[1][4] = GetClosestPlayer().Character.Hitbox.Position
+			Arguments[1][10] = GetClosestPlayer().Character.Hitbox.Position
+		end
+
+		return Self.FireServer(Self, unpack(Arguments))
+	elseif not checkcaller() and tostring(Self) == "RemoteEvent" and tostring(NameCallMethod) == "FireServer" then
+		if getgenv().SilentAimEnabled == true then
+			if Arguments[1][1] == "createparticle" and Arguments[1][2] == "muzzle" then
+				if Arguments[3] == LocalPlayer.Character.Gun then
+					if ReplicatedStorage.Weapons(LocalPlayer.Character.Gun.Boop.Value).Melee then
+						local KnifeArguments1 = {
+							[1] = "createparticle",
+							[2] = "bullethole",
+							[3] = GetClosestPlayer().Character.Hitbox,
+							[4] = GetClosestPlayer().Character.Hitbox.Position,
+							[5] = Vector3.new(0, 0, 0),
+							[6] = ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.Gun.Boop.Value),
+							[7] = false,
+							[8] = GetClosestPlayer().Character.Hitbox.Position,
+							[9] = true,
+							[12] = LocalPlayer,
+							[13] = 1
+						}
+						
+						local KnifeArguments = {
+							GetClosestPlayer().Character.Hitbox,
+							GetClosestPlayer().Character.Hitbox.Position,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).Name,
+							1,
+							5,
+							false,
+							false,
+							false,
+							1,
+							false,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).FireRate.Value,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).ReloadTime.Value,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).Ammo.Value,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).StoredAmmo.Value,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).Bullets.Value,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).EquipTime.Value,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).RecoilControl.Value,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value).Auto.Value,
+							ReplicatedStorage.Weapons:FindFirstChild(LocalPlayer.Character.EquippedTool.Value)["Speed%"].Value,
+							ReplicatedStorage:WaitForChild("wkspc").DistributedTime.Value,
+							215,
+							1,
+							false,
+							true
+						}
+
+						ReplicatedStorage.Events.RemoteEvent:FireServer(KnifeArguments1)
+						ReplicatedStorage.Events.HitPart:FireServer(unpack(KnifeArguments))
+					end
+				end
+			end
+		end
+
+		return Self.FireServer(Self, unpack(Arguments))
 	end
-}).Default = Settings.Toggle
 
-Settings.LockPart = Parts[1]; Values:AddDropdown({
-	Name = "Lock Part",
-	Value = Parts[1],
-	Callback = function(New, Old)
-		Settings.LockPart = New
-	end,
-	List = Parts,
-	Nothing = "Head"
-}).Default = Parts[1]
-
-Values:AddTextbox({ -- Using a Textbox instead of a Keybind because the UI Library doesn't support Mouse inputs like Left Click / Right Click...
-	Name = "Hotkey",
-	Value = Settings.TriggerKey,
-	Callback = function(New, Old)
-		Settings.TriggerKey = New
-	end
-}).Default = Settings.TriggerKey
-
---[[
-Values:AddKeybind({
-	Name = "Hotkey",
-	Value = Settings.TriggerKey,
-	Callback = function(New, Old)
-		Settings.TriggerKey = stringmatch(tostring(New), "Enum%.[UserInputType]*[KeyCode]*%.(.+)")
-	end,
-}).Default = Settings.TriggerKey
-]]
-
-Values:AddSlider({
-	Name = "Sensitivity",
-	Value = Settings.Sensitivity,
-	Callback = function(New, Old)
-		Settings.Sensitivity = New
-	end,
-	Min = 0,
-	Max = 1,
-	Decimals = 2
-}).Default = Settings.Sensitivity
-
---// Settings / Checks
-
-Checks:AddToggle({
-	Name = "Team Check",
-	Value = Settings.TeamCheck,
-	Callback = function(New, Old)
-		Settings.TeamCheck = New
-	end
-}).Default = Settings.TeamCheck
-
-Checks:AddToggle({
-	Name = "Wall Check",
-	Value = Settings.WallCheck,
-	Callback = function(New, Old)
-		Settings.WallCheck = New
-	end
-}).Default = Settings.WallCheck
-
-Checks:AddToggle({
-	Name = "Alive Check",
-	Value = Settings.AliveCheck,
-	Callback = function(New, Old)
-		Settings.AliveCheck = New
-	end
-}).Default = Settings.AliveCheck
-
---// Settings / ThirdPerson
-
-ThirdPerson:AddToggle({
-	Name = "Enable Third Person",
-	Value = Settings.ThirdPerson,
-	Callback = function(New, Old)
-		Settings.ThirdPerson = New
-	end
-}).Default = Settings.ThirdPerson
-
-ThirdPerson:AddSlider({
-	Name = "Sensitivity",
-	Value = Settings.ThirdPersonSensitivity,
-	Callback = function(New, Old)
-		Settings.ThirdPersonSensitivity = New
-	end,
-	Min = 0.1,
-	Max = 5,
-	Decimals = 1
-}).Default = Settings.ThirdPersonSensitivity
-
---// FOV Settings / Values
-
-FOV_Values:AddToggle({
-	Name = "Enabled",
-	Value = FOVSettings.Enabled,
-	Callback = function(New, Old)
-		FOVSettings.Enabled = New
-	end
-}).Default = FOVSettings.Enabled
-
-FOV_Values:AddToggle({
-	Name = "Visible",
-	Value = FOVSettings.Visible,
-	Callback = function(New, Old)
-		FOVSettings.Visible = New
-	end
-}).Default = FOVSettings.Visible
-
-FOV_Values:AddSlider({
-	Name = "Amount",
-	Value = FOVSettings.Amount,
-	Callback = function(New, Old)
-		FOVSettings.Amount = New
-	end,
-	Min = 10,
-	Max = 300
-}).Default = FOVSettings.Amount
-
---// FOV Settings / Appearance
-
-FOV_Appearance:AddToggle({
-	Name = "Filled",
-	Value = FOVSettings.Filled,
-	Callback = function(New, Old)
-		FOVSettings.Filled = New
-	end
-}).Default = FOVSettings.Filled
-
-FOV_Appearance:AddSlider({
-	Name = "Transparency",
-	Value = FOVSettings.Transparency,
-	Callback = function(New, Old)
-		FOVSettings.Transparency = New
-	end,
-	Min = 0,
-	Max = 1,
-	Decimal = 1
-}).Default = FOVSettings.Transparency
-
-FOV_Appearance:AddSlider({
-	Name = "Sides",
-	Value = FOVSettings.Sides,
-	Callback = function(New, Old)
-		FOVSettings.Sides = New
-	end,
-	Min = 3,
-	Max = 60
-}).Default = FOVSettings.Sides
-
-FOV_Appearance:AddSlider({
-	Name = "Thickness",
-	Value = FOVSettings.Thickness,
-	Callback = function(New, Old)
-		FOVSettings.Thickness = New
-	end,
-	Min = 1,
-	Max = 50
-}).Default = FOVSettings.Thickness
-
-FOV_Appearance:AddColorpicker({
-	Name = "Color",
-	Value = FOVSettings.Color,
-	Callback = function(New, Old)
-		FOVSettings.Color = New
-	end
-}).Default = FOVSettings.Color
-
-FOV_Appearance:AddColorpicker({
-	Name = "Locked Color",
-	Value = FOVSettings.LockedColor,
-	Callback = function(New, Old)
-		FOVSettings.LockedColor = New
-	end
-}).Default = FOVSettings.LockedColor
-
---// Functions / Functions
-
-FunctionsSection:AddButton({
-	Name = "Reset Settings",
-	Callback = function()
-		Functions.ResetSettings()
-		Library.ResetAll()
-	end
-})
-
-FunctionsSection:AddButton({
-	Name = "Restart",
-	Callback = Functions.Restart
-})
-
-FunctionsSection:AddButton({
-	Name = "Exit",
-	Callback = function()
-		Functions:Exit()
-		Library.Unload()
-	end
-})
-
-FunctionsSection:AddButton({
-	Name = "Copy Script Page",
-	Callback = function()
-		setclipboard("https://github.com/Exunys/Aimbot-V2")
-	end
-})
+	return OldNameCall(Self, ...)
+end)
